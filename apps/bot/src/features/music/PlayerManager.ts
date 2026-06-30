@@ -9,6 +9,8 @@ import {
 } from '@discordjs/voice';
 import * as play from 'play-dl';
 
+const YT_COOKIE = process.env.YT_COOKIE || '';
+
 interface Song {
   title: string;
   url: string;
@@ -59,7 +61,9 @@ class PlayerManager {
       const abort = new AbortController();
       queue.abortController = abort;
 
-      const stream = await play.stream(queue.currentSong.url, { signal: abort.signal });
+      const streamOpts: any = { signal: abort.signal };
+      if (YT_COOKIE) streamOpts.cookie = YT_COOKIE;
+      const stream = await play.stream(queue.currentSong.url, streamOpts);
 
       const resource = createAudioResource(stream.stream, {
         inputType: stream.type === 'opus' ? StreamType.Opus : StreamType.Arbitrary,
@@ -89,7 +93,7 @@ class PlayerManager {
       if (error?.message?.includes('Sign in') || error?.message?.includes('bot')) {
         console.error('YouTube blocked, trying opus re-encode...');
         try {
-          const stream = await play.stream(queue.currentSong.url, { signal: undefined });
+          const stream = await play.stream(queue.currentSong.url, { cookie: YT_COOKIE });
           const resource = createAudioResource(stream.stream, {
             inputType: StreamType.Arbitrary,
           });
