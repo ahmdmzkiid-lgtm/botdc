@@ -1,9 +1,8 @@
 import { Interaction, MessageFlags } from 'discord.js';
 import { executeCustomCommand } from '../commands/customCommand';
+import { handleMusicCommand } from '../commands/music';
 
-const musicEnabled = process.env.MUSIC_ENABLED === 'true';
-const musicCommands = musicEnabled ? ['play', 'skip', 'stop', 'queue', 'pause', 'resume', 'nowplaying'] : [];
-const { handleMusicCommand } = musicEnabled ? require('../commands/music') : {};
+const musicCommands = ['play', 'skip', 'stop', 'queue', 'pause', 'resume', 'nowplaying'];
 
 export const name = 'interactionCreate';
 
