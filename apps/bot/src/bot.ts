@@ -11,15 +11,17 @@ if (ffmpegPath) {
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const { loadEvents } = require('./events');
 
+const intents = [
+  GatewayIntentBits.Guilds,
+  GatewayIntentBits.GuildMembers,
+  GatewayIntentBits.GuildMessages,
+  GatewayIntentBits.GuildMessageReactions,
+  GatewayIntentBits.MessageContent,
+];
+if (process.env.MUSIC_ENABLED === 'true') intents.push(GatewayIntentBits.GuildVoiceStates);
+
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildVoiceStates,
-  ],
+  intents,
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 

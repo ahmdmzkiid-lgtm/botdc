@@ -1,5 +1,4 @@
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
-import { musicCommands } from './music';
 
 const staticCommands = [
   new SlashCommandBuilder()
@@ -7,8 +6,17 @@ const staticCommands = [
     .setDescription('Balas dengan Pong!'),
 ];
 
+const musicEnabled = process.env.MUSIC_ENABLED === 'true';
+
+let allCommands = [...staticCommands];
+
+if (musicEnabled) {
+  const { musicCommands } = require('./music');
+  allCommands = [...allCommands, ...musicCommands];
+}
+
 export function getAllCommandData() {
-  return [...staticCommands, ...musicCommands].map((cmd) => cmd.toJSON());
+  return allCommands.map((cmd) => cmd.toJSON());
 }
 
 export async function registerCommands(clientId: string, guildId: string, token: string) {
