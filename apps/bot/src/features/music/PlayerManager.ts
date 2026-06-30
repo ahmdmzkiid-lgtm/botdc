@@ -36,12 +36,30 @@ function getYtdlPath(): string {
     path.resolve(__dirname, '../../../../../node_modules/.pnpm'),
     path.resolve(__dirname, '../../../../node_modules/.pnpm'),
     path.resolve(process.cwd(), '../../node_modules/.pnpm'),
+    path.resolve(__dirname, '../../../../node_modules/ytdlp-nodejs'),
+    path.resolve(process.cwd(), 'node_modules/ytdlp-nodejs'),
   ];
-  for (const pnpmDir of candidates) {
+  for (const dir of candidates) {
     try {
-      const entries = fs.readdirSync(pnpmDir);
-      const dir = entries.find((d: string) => d.startsWith('ytdlp-nodejs@'));
-      if (dir) return path.join(pnpmDir, dir, 'node_modules/ytdlp-nodejs/bin/yt-dlp.exe');
+      const entries = fs.readdirSync(dir);
+      if (dir.includes('.pnpm')) {
+        const pkg = entries.find((d: string) => d.startsWith('ytdlp-nodejs@'));
+        if (pkg) {
+          const bin = path.join(dir, pkg, 'node_modules/ytdlp-nodejs/bin');
+          for (const name of ['yt-dlp', 'yt-dlp.exe', 'yt-dlp_linux']) {
+            const p = path.join(bin, name);
+            if (fs.existsSync(p)) return p;
+          }
+        }
+      } else {
+        const bin = path.join(dir, 'bin');
+        if (fs.existsSync(bin)) {
+          for (const name of ['yt-dlp', 'yt-dlp.exe', 'yt-dlp_linux']) {
+            const p = path.join(bin, name);
+            if (fs.existsSync(p)) return p;
+          }
+        }
+      }
     } catch {}
   }
   throw new Error('yt-dlp binary not found');

@@ -1,4 +1,4 @@
-const { spawn, execSync } = require('child_process');
+const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -6,7 +6,6 @@ const root = __dirname;
 const botDir = path.join(root, 'apps/bot');
 const env = { ...process.env, NODE_ENV: 'production' };
 
-// Check if node_modules/.bin/tsx exists
 const tsxPaths = [
   path.join(botDir, 'node_modules/.bin/tsx'),
   path.join(root, 'node_modules/.bin/tsx'),
@@ -20,21 +19,26 @@ for (const p of tsxPaths) {
 
 if (!tsxBin) { tsxBin = 'npx'; }
 
-function start(name, script) {
+function start(name, script, extraEnv) {
   const args = tsxBin === 'npx' ? ['tsx', script] : [script];
   return spawn(tsxBin, args, {
     stdio: 'inherit',
-    env,
+    env: extraEnv ? { ...env, ...extraEnv } : env,
     cwd: botDir,
   });
 }
 
 const server = start('API', 'src/api/server.ts');
 const bot = start('Bot', 'src/bot.ts');
+const keepalive = spawn('node', [path.join(root, 'keepalive.js')], {
+  stdio: 'inherit',
+  env: { ...env, RENDER_URL: 'https://botdc-4cl7.onrender.com' },
+});
 
 function shutdown() {
   server.kill('SIGTERM');
   bot.kill('SIGTERM');
+  keepalive.kill('SIGTERM');
   process.exit(0);
 }
 
