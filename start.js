@@ -2,13 +2,13 @@ const { spawn } = require('child_process');
 const path = require('path');
 
 const root = __dirname;
-
-const tsx = path.join(root, 'node_modules/.bin/tsx');
+const botBin = path.join(root, 'apps/bot/node_modules/.bin');
+const env = { ...process.env, NODE_ENV: 'production', PATH: `${botBin}:${process.env.PATH || ''}` };
 
 function start(name, script) {
-  return spawn(tsx, [script], {
+  return spawn('tsx', [path.join(root, script)], {
     stdio: 'inherit',
-    env: { ...process.env, NODE_ENV: 'production' },
+    env,
   });
 }
 
