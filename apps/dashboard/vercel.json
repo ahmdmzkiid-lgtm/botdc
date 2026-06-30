@@ -1,10 +1,9 @@
 {
   "framework": "vite",
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter dashboard build",
-  "outputDirectory": "apps/dashboard/dist",
-  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://bot-discord-z.onrender.com/api/$1" },
+    { "source": "/api/(.*)", "destination": "https://botdc-4cl7.onrender.com/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "env": {
