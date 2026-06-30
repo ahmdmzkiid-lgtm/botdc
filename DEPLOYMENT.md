@@ -44,7 +44,7 @@ Semua variable wajib diisi di dashboard Render & Vercel:
 
 ## 2. Deploy Bot ke Render
 
-### Option A: Via Render Dashboard (recommended)
+### Via Render Dashboard
 
 1. Login ke [render.com](https://render.com)
 2. **New +** → **Web Service**
@@ -53,8 +53,16 @@ Semua variable wajib diisi di dashboard Render & Vercel:
    - **Name:** `bot-discord-z`
    - **Region:** Singapore (sesuaikan)
    - **Branch:** `main`
-   - **Runtime:** `Docker`
-   - **Dockerfile Path:** `apps/bot/Dockerfile`
+   - **Root Directory:** (biarkan kosong)
+   - **Runtime:** `Node`
+   - **Build Command:**
+     ```
+     npm install -g pnpm && pnpm install --frozen-lockfile && pnpm --filter shared build && pnpm --filter bot build
+     ```
+   - **Start Command:**
+     ```
+     node start.js
+     ```
    - **Health Check Path:** `/health`
 5. **Advanced** → Add Environment Variables:
    - `NODE_ENV = production`
@@ -68,14 +76,8 @@ Semua variable wajib diisi di dashboard Render & Vercel:
    - `BOT_API_URL = https://bot-discord-z.onrender.com`
 6. **Create Web Service**
 
-### Option B: Via render.yaml (Blueprint)
-
-1. **New +** → **Blueprint**
-2. Connect GitHub repo
-3. Render auto-detect `render.yaml`
-4. Isi environment variables yang marked as `sync: false` di Render dashboard
-
 > Build & deploy pertama ~5-10 menit. Bot akan restart otomatis setiap ada push ke GitHub.
+> `start.js` menjalankan API server (port 3001) dan Discord bot secara bersamaan.
 
 ---
 
@@ -131,7 +133,7 @@ Setelah deploy, ganti URL di `apps/dashboard/vercel.json` dengan URL asli Render
 
 ## 6. Notes
 
-- **Bot Dockerfile** menjalankan API server (port 3001) dan Discord bot secara bersamaan dalam satu container
+- **start.js** menjalankan API server (port 3001) dan Discord bot secara bersamaan
 - **Prisma migrate** dijalankan otomatis via `prisma db push` di Dockerfile (perlu ditambahkan jika belum)
 - Jika ada error `Missing Permissions`, pastikan role bot di atas role target di server Discord
 - Untuk development lokal, cukup `pnpm dev` di root
