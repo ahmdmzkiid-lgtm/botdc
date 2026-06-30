@@ -57,7 +57,7 @@ Semua variable wajib diisi di dashboard Render & Vercel:
    - **Runtime:** `Node`
    - **Build Command:**
      ```
-     npm install -g pnpm && pnpm install --frozen-lockfile && pnpm --filter shared build && pnpm --filter bot build
+     corepack enable && pnpm install --frozen-lockfile
      ```
    - **Start Command:**
      ```
