@@ -1,4 +1,3 @@
-import { spawn, ChildProcess } from 'child_process';
 import {
   joinVoiceChannel,
   createAudioPlayer,
@@ -9,8 +8,6 @@ import {
   StreamType,
 } from '@discordjs/voice';
 import * as play from 'play-dl';
-
-const YTDLP_PATH = process.env.YTDLP_PATH || '';
 
 interface Song {
   title: string;
@@ -25,58 +22,7 @@ interface GuildQueue {
   currentSong: Song | null;
   connection: any;
   player: any;
-  streamProcess: ChildProcess | null;
-}
-
-function getYtdlPath(): string {
-  if (YTDLP_PATH) return YTDLP_PATH;
-  const fs = require('fs');
-  const path = require('path');
-  const candidates = [
-    path.resolve(__dirname, '../../../../../node_modules/.pnpm'),
-    path.resolve(__dirname, '../../../../node_modules/.pnpm'),
-    path.resolve(process.cwd(), '../../node_modules/.pnpm'),
-    path.resolve(__dirname, '../../../../node_modules/ytdlp-nodejs'),
-    path.resolve(process.cwd(), 'node_modules/ytdlp-nodejs'),
-  ];
-  for (const dir of candidates) {
-    try {
-      const entries = fs.readdirSync(dir);
-      if (dir.includes('.pnpm')) {
-        const pkg = entries.find((d: string) => d.startsWith('ytdlp-nodejs@'));
-        if (pkg) {
-          const bin = path.join(dir, pkg, 'node_modules/ytdlp-nodejs/bin');
-          for (const name of ['yt-dlp', 'yt-dlp.exe', 'yt-dlp_linux']) {
-            const p = path.join(bin, name);
-            if (fs.existsSync(p)) return p;
-          }
-        }
-      } else {
-        const bin = path.join(dir, 'bin');
-        if (fs.existsSync(bin)) {
-          for (const name of ['yt-dlp', 'yt-dlp.exe', 'yt-dlp_linux']) {
-            const p = path.join(bin, name);
-            if (fs.existsSync(p)) return p;
-          }
-        }
-      }
-    } catch {}
-  }
-  throw new Error('yt-dlp binary not found');
-}
-
-function spawnYtdlp(url: string): ChildProcess {
-  const ytdlpPath = getYtdlPath();
-  console.log(`Spawning yt-dlp: ${ytdlpPath}`);
-  return spawn(ytdlpPath, [
-    url,
-    '-f', '251/bestaudio[ext=m4a]',
-    '-o', '-',
-    '--no-playlist',
-    '--quiet',
-    '--extractor-args', 'youtube:player_client=android',
-    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  abortController: AbortController | null;
 }
 
 class PlayerManager {
@@ -93,7 +39,7 @@ class PlayerManager {
         currentSong: null,
         connection: null,
         player: createAudioPlayer(),
-        streamProcess: null,
+        abortController: null,
       });
     }
     return this.queues.get(guildId)!;
@@ -110,23 +56,20 @@ class PlayerManager {
 
     try {
       console.log(`Starting stream for: ${queue.currentSong.title}`);
-      const proc = spawnYtdlp(queue.currentSong.url);
-      queue.streamProcess = proc;
+      const abort = new AbortController();
+      queue.abortController = abort;
 
-      proc.stderr.on('data', (d: Buffer) => {
-        const msg = d.toString();
-        if (msg.includes('ERROR')) console.error('yt-dlp error:', msg);
-      });
+      const stream = await play.stream(queue.currentSong.url, { signal: abort.signal });
 
-      const resource = createAudioResource(proc.stdout, {
-        inputType: StreamType.WebmOpus,
+      const resource = createAudioResource(stream.stream, {
+        inputType: stream.type === 'opus' ? StreamType.Opus : StreamType.Arbitrary,
       });
 
       queue.player.removeAllListeners();
       queue.player.on(AudioPlayerStatus.Idle, () => {
         console.log(`Song finished: ${queue.currentSong?.title}`);
         queue.currentSong = null;
-        queue.streamProcess = null;
+        queue.abortController = null;
         this.playSong(guildId);
       });
       queue.player.on(AudioPlayerStatus.Playing, () => {
@@ -134,22 +77,37 @@ class PlayerManager {
       });
       queue.player.on('error', (error: Error) => {
         console.error('Player error:', error);
-        if (queue.streamProcess) {
-          queue.streamProcess.kill();
-          queue.streamProcess = null;
-        }
+        queue.abortController?.abort();
+        queue.abortController = null;
         queue.currentSong = null;
         this.playSong(guildId);
       });
 
       queue.connection.subscribe(queue.player);
       queue.player.play(resource);
-    } catch (error) {
-      console.error('Failed to play song:', error);
-      if (queue.streamProcess) {
-        queue.streamProcess.kill();
-        queue.streamProcess = null;
+    } catch (error: any) {
+      if (error?.message?.includes('Sign in') || error?.message?.includes('bot')) {
+        console.error('YouTube blocked, trying opus re-encode...');
+        try {
+          const stream = await play.stream(queue.currentSong.url, { signal: undefined });
+          const resource = createAudioResource(stream.stream, {
+            inputType: StreamType.Arbitrary,
+          });
+          queue.player.removeAllListeners();
+          queue.player.on(AudioPlayerStatus.Idle, () => {
+            queue.currentSong = null;
+            this.playSong(guildId);
+          });
+          queue.player.on('error', () => {
+            queue.currentSong = null;
+            this.playSong(guildId);
+          });
+          queue.connection.subscribe(queue.player);
+          queue.player.play(resource);
+          return;
+        } catch {}
       }
+      console.error('Failed to play song:', error);
       queue.currentSong = null;
       this.playSong(guildId);
     }
@@ -246,10 +204,8 @@ class PlayerManager {
           entersState(queue.connection, VoiceConnectionStatus.Connecting, 5000),
         ]);
       } catch {
-        if (queue.streamProcess) {
-          queue.streamProcess.kill();
-          queue.streamProcess = null;
-        }
+        queue.abortController?.abort();
+        queue.abortController = null;
         queue.connection.destroy();
         this.queues.delete(guildId);
       }
@@ -273,24 +229,15 @@ class PlayerManager {
 
   skip(guildId: string): boolean {
     const queue = this.queues.get(guildId);
-    if (queue?.streamProcess) {
-      queue.streamProcess.kill();
-      queue.streamProcess = null;
-    }
-    if (queue?.player) {
-      queue.player.stop();
-      return true;
-    }
-    return false;
+    queue?.abortController?.abort();
+    queue?.player?.stop();
+    return true;
   }
 
   stop(guildId: string) {
     const queue = this.queues.get(guildId);
     if (queue) {
-      if (queue.streamProcess) {
-        queue.streamProcess.kill();
-        queue.streamProcess = null;
-      }
+      queue.abortController?.abort();
       queue.songs = [];
       queue.currentSong = null;
       queue.player.stop();
