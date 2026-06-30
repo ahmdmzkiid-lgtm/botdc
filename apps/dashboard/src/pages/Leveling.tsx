@@ -6,7 +6,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { toast } from '../components/ui/Toast';
 import { useAuthStore } from '../stores/authStore';
-import { Zap, Medal, Trophy, Plus, Trash2, RefreshCw, Save, Settings, Crown, Star, Bell, Hash } from 'lucide-react';
+import { Zap, Medal, Trophy, Plus, Trash2, RefreshCw, Save, Settings, Crown, Star, Bell } from 'lucide-react';
 
 interface Channel { id: string; name: string }
 interface Role { id: string; name: string; color: number }
@@ -293,7 +293,7 @@ export function LevelingPage() {
           ) : (
             <div className="space-y-3">
               {(levelRoles || []).length > 0 ? (
-                (levelRoles || []).map((lr: LevelRole, i: number) => (
+                (levelRoles || []).map((lr: LevelRole) => (
                   <div
                     key={lr.id}
                     className="flex items-center justify-between bg-gray-900/30 border border-gray-700/30 rounded-xl px-5 py-4 hover:border-gray-600/50 transition-all group"
