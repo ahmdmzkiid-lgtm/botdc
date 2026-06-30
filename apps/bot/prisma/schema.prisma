@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Guild {
+  id               String   @id
+  welcomeEnabled   Boolean  @default(false)
+  welcomeChannelId String?
+  welcomeMessage   String?
+  goodbyeEnabled   Boolean  @default(false)
+  goodbyeChannelId String?
+  goodbyeMessage   String?
+  autoRoleId       String?
+  levelUpEnabled   Boolean  @default(false)
+  levelUpChannelId String?
+  levelUpMessage   String?
+  xpPerMessage     Int      @default(10)
+  xpCooldownSec    Int      @default(60)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model MemberXP {
+  id            Int      @id @default(autoincrement())
+  guildId       String
+  userId        String
+  xp            Int      @default(0)
+  level         Int      @default(0)
+  totalMessages Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  @@unique([guildId, userId])
+}
+
+model LevelRole {
+  id      Int    @id @default(autoincrement())
+  guildId String
+  level   Int
+  roleId  String
+}
+
+model ReactionRole {
+  id        Int    @id @default(autoincrement())
+  guildId   String
+  messageId String
+  channelId String
+  emoji     String
+  roleId    String
+}
+
+model CustomCommand {
+  id          Int    @id @default(autoincrement())
+  guildId     String
+  name        String
+  description String
+  response    String
+
+  @@unique([guildId, name])
+}
+
+model AutoModConfig {
+  id               Int      @id @default(autoincrement())
+  guildId          String   @unique
+  antiInvite       Boolean  @default(false)
+  antiSpam         Boolean  @default(false)
+  spamThreshold    Int      @default(5)
+  bannedWords      String[]
+  warnThreshold    Int      @default(3)
+  muteDurationMin  Int      @default(60)
+}
+
+model ModLog {
+  id          Int       @id @default(autoincrement())
+  guildId     String
+  userId      String
+  moderatorId String
+  action      String
+  reason      String?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+}

@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: bot-discord-z
+    env: docker
+    dockerfilePath: apps/bot/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: DASHBOARD_URL
+        value: https://bot-discord-z.vercel.app
+      - key: BOT_API_URL
+        value: https://bot-discord-z.onrender.com
+    healthCheckPath: /health
